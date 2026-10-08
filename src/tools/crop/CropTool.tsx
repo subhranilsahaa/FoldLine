@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { usePdfStore } from '../../lib/store';
-import { buildPdf, downloadBytes, type Crop } from '../../lib/pdf';
+import { buildPdf, downloadBytes, startRender, totalRotation, type Crop, type PageItem, type SourceDoc } from '../../lib/pdf';
 import { docKey, pageNames } from '../../lib/filename';
 import { useFileName } from '../../lib/useFileName';
 import { META } from '../../tools-meta';
@@ -22,7 +22,32 @@ const HANDLES: [string, number, number, string][] = [
   ['nw', 0, 0, 'nwse'], ['n', 50, 0, 'ns'], ['ne', 100, 0, 'nesw'], ['e', 100, 50, 'ew'],
   ['se', 100, 100, 'nwse'], ['s', 50, 100, 'ns'], ['sw', 0, 100, 'nesw'], ['w', 0, 50, 'ew'],
 ];
+const MIN = 0.03; // smallest box edge, as a fraction of the page
+const EDGES: [string, string, string][] = [
+  ['n', 'left-0 right-0 top-0 h-6 -translate-y-1/2', 'ns-resize'], ['s', 'left-0 right-0 bottom-0 h-6 translate-y-1/2', 'ns-resize'],
+  ['w', 'top-0 bottom-0 left-0 w-6 -translate-x-1/2', 'ew-resize'], ['e', 'top-0 bottom-0 right-0 w-6 translate-x-1/2', 'ew-resize'],
+];
 const pct = (c: Crop) => ({ left: `${c.x * 100}%`, top: `${c.y * 100}%`, width: `${c.w * 100}%`, height: `${c.h * 100}%` });
+
+interface Bounds { l: number; t: number; r: number; b: number }
+
+/** Bounding box (as page fractions) of everything that isn't blank paper, found by scanning a small render of the page. */
+async function contentBounds(doc: SourceDoc, item: PageItem): Promise<Bounds | null> {
+  const { canvas, task } = await startRender(doc, item.index, totalRotation(item), 400);
+  await task.promise;
+  const { width: w, height: h } = canvas;
+  const d = canvas.getContext('2d')!.getImageData(0, 0, w, h).data;
+  let l = w, t = h, r = -1, b = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] > 20 && (d[i] < 238 || d[i + 1] < 238 || d[i + 2] < 238)) {
+        if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y;
+      }
+    }
+  }
+  return r < 0 ? null : { l: l / w, t: t / h, r: (r + 1) / w, b: (b + 1) / h };
+}
 
 function Cropper() {
   const pages = usePdfStore((s) => s.pages);
@@ -31,6 +56,8 @@ function Cropper() {
   const [cur, setCur] = useState(0);
   const [busy, setBusy] = useState(false);
   const [same, setSame] = useState(true);
+  const [detecting, setDetecting] = useState(false);
+  const coarse = useRef(typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches).current;
   const drag = useRef<Drag | null>(null);
   const stage = useRef<HTMLDivElement>(null);
   const name = useFileName('crop', pageNames(pages, docs), docKey(pages));
@@ -46,8 +73,10 @@ function Cropper() {
 
   const onDown = (e: PointerEvent) => {
     const p = point(e);
-    const h = (e.target as HTMLElement).dataset.h;
+    const h = (e.target as HTMLElement).closest<HTMLElement>('[data-h]')?.dataset.h;
     const inside = crop && p[0] >= crop.x && p[0] <= crop.x + crop.w && p[1] >= crop.y && p[1] <= crop.y + crop.h;
+    // A finger on empty page area scrolls the page instead of drawing (use "Add crop box" / "Auto-trim" on touch).
+    if (e.pointerType === 'touch' && !h && !inside) return;
     drag.current = crop && h ? { m: 'resize', h, c: { ...crop } }
       : crop && inside ? { m: 'move', p0: p, c: { ...crop } }
       : { m: 'new', p0: p };
@@ -59,6 +88,8 @@ function Cropper() {
     if (!d) return;
     const p = point(e);
     if (d.m === 'new') {
+      // ignore tiny jitters so a plain click doesn't replace the existing box
+      if (Math.abs(p[0] - d.p0[0]) < 0.012 && Math.abs(p[1] - d.p0[1]) < 0.012) return;
       setCrop(page.id, { x: Math.min(d.p0[0], p[0]), y: Math.min(d.p0[1], p[1]), w: Math.abs(p[0] - d.p0[0]), h: Math.abs(p[1] - d.p0[1]) });
     } else if (d.m === 'move') {
       setCrop(page.id, {
@@ -67,20 +98,50 @@ function Cropper() {
         y: Math.max(0, Math.min(1 - d.c.h, d.c.y + p[1] - d.p0[1])),
       });
     } else {
+      // edges stop at a minimum size instead of flipping over or vanishing
       let l = d.c.x, t = d.c.y, r = d.c.x + d.c.w, b = d.c.y + d.c.h;
-      if (d.h.includes('w')) l = p[0];
-      if (d.h.includes('e')) r = p[0];
-      if (d.h.includes('n')) t = p[1];
-      if (d.h.includes('s')) b = p[1];
-      setCrop(page.id, { x: Math.min(l, r), y: Math.min(t, b), w: Math.abs(r - l), h: Math.abs(b - t) });
+      if (d.h.includes('w')) l = Math.min(p[0], r - MIN);
+      if (d.h.includes('e')) r = Math.max(p[0], l + MIN);
+      if (d.h.includes('n')) t = Math.min(p[1], b - MIN);
+      if (d.h.includes('s')) b = Math.max(p[1], t + MIN);
+      setCrop(page.id, { x: l, y: t, w: r - l, h: b - t });
     }
   };
 
   const onUp = () => {
-    const c = usePdfStore.getState().pages[index]?.crop;
-    if (drag.current && c && (c.w < 0.03 || c.h < 0.03)) setCrop(page.id, null);
-    else if (drag.current && c && same) setCropAll(c); // one box for every page, no extra click
+    const d = drag.current;
     drag.current = null;
+    if (!d) return;
+    const c = usePdfStore.getState().pages[index]?.crop;
+    if (!c) return;
+    if (d.m === 'new' && (c.w < MIN || c.h < MIN)) setCrop(page.id, null);
+    else if (same) setCropAll(c); // one box for every page, no extra click
+  };
+
+  const apply = (c: Crop) => (same ? setCropAll(c) : setCrop(page.id, c));
+  const addBox = () => apply({ x: 0.08, y: 0.08, w: 0.84, h: 0.84 });
+
+  // Finds the printed area and crops to it (union over all pages when "same crop" is on).
+  const autoTrim = async () => {
+    setDetecting(true);
+    try {
+      const targets = same && pages.length <= 40 ? pages : [page];
+      let u: Bounds | null = null;
+      for (const p of targets) {
+        const b = await contentBounds(docs[p.docId], p);
+        if (b) u = u ? { l: Math.min(u.l, b.l), t: Math.min(u.t, b.t), r: Math.max(u.r, b.r), b: Math.max(u.b, b.b) } : b;
+      }
+      if (!u) { notify('Nothing to trim: the page looks blank.'); return; }
+      const padX = 0.02, padY = 0.02;
+      const x = clamp(u.l - padX), y = clamp(u.t - padY);
+      const c = { x, y, w: clamp(u.r + padX) - x, h: clamp(u.b + padY) - y };
+      if (c.w > 0.96 && c.h > 0.96) { notify('Margins are already tight, nothing to trim.'); return; }
+      apply(c);
+    } catch (e) {
+      notify(`Auto-trim failed: ${e instanceof Error ? e.message : 'unknown error'}`);
+    } finally {
+      setDetecting(false);
+    }
   };
 
   // Left/Right arrows flip between pages.
@@ -115,6 +176,8 @@ function Cropper() {
         <span className="px-1.5 text-[13px] text-mute">Page {index + 1} of {pages.length}</span>
         <button className="btn" disabled={index >= pages.length - 1} onClick={() => setCur(index + 1)}>Next<Icon name="right" /></button>
         <button className="btn" onClick={() => rotate([page.id])}><Icon name="rotate" />Rotate</button>
+        <button className="btn" disabled={detecting} onClick={() => void autoTrim()}><Icon name="crop" />{detecting ? 'Detecting…' : 'Auto-trim margins'}</button>
+        {!crop && <button className="btn" onClick={addBox}><Icon name="plus" />Add crop box</button>}
         <span className="flex-1" />
         <label className="flex cursor-pointer items-center gap-2 px-1 text-sm">
           <input type="checkbox" checked={same} onChange={(e) => { setSame(e.target.checked); if (e.target.checked && crop) setCropAll(crop); }} className="size-4 accent-[var(--ink)]" />
@@ -129,29 +192,41 @@ function Cropper() {
         onPointerMove={onMove}
         onPointerUp={onUp}
         onPointerCancel={onUp}
-        className="relative mt-2 w-full max-w-[660px] cursor-crosshair touch-none select-none bg-white shadow-sheet"
+        className="relative mt-2 w-full max-w-[660px] cursor-crosshair touch-pan-y select-none bg-white shadow-sheet"
       >
         <PageCanvas doc={docs[page.docId]} item={page} width={660} className="pointer-events-none" />
+        {!crop && (
+          <div className="pointer-events-none absolute inset-0 grid place-items-center p-4">
+            <span className="rounded-full bg-[#14171C]/85 px-4 py-2 text-center text-sm font-medium text-white">
+              {coarse ? 'Tap “Add crop box” or “Auto-trim margins”' : 'Drag on the page to choose the area to keep'}
+            </span>
+          </div>
+        )}
         {crop && (
           <>
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
               <div style={pct(crop)} className="absolute shadow-[0_0_0_9999px_rgba(10,14,20,0.6)]" />
             </div>
-            <div style={pct(crop)} className="pointer-events-none absolute border-2 border-hl">
+            <div style={pct(crop)} className="pointer-events-auto absolute cursor-move touch-none border-2 border-hl">
+              {EDGES.map(([h, pos, cursor]) => (
+                <i key={h} data-h={h} style={{ cursor }} className={`absolute touch-none ${pos}`} />
+              ))}
               {HANDLES.map(([h, x, y, cursor]) => (
                 <i
                   key={h}
                   data-h={h}
                   style={{ left: `${x}%`, top: `${y}%`, cursor: `${cursor}-resize` }}
-                  className="pointer-events-auto absolute size-4 -translate-x-1/2 -translate-y-1/2 touch-none rounded-full border-2 border-[#14171C] bg-hl"
-                />
+                  className="absolute grid size-11 -translate-x-1/2 -translate-y-1/2 touch-none place-items-center"
+                >
+                  <b className="size-5 rounded-full border-2 border-[#14171C] bg-hl shadow" />
+                </i>
               ))}
             </div>
           </>
         )}
       </div>
       <p className="mt-3.5 max-w-[62ch] text-[13px] text-mute">
-        Drag on the page to draw the area to keep. Drag the box to move it and the dots to resize. Use the left and right arrow keys to change page; untick “Same crop on every page” to crop pages differently. The original content stays in the file; only the visible area changes.
+        {coarse ? 'Drag the box to move it and the dots or edges to resize.' : 'Drag on the page to draw a box. Drag inside it to move, or pull the dots and edges to resize.'} Arrow keys change page; untick “Same crop on every page” to crop pages differently. The original content stays in the file; only the visible area changes.
       </p>
 
       <Dock>
