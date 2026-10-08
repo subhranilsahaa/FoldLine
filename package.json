@@ -1,0 +1,39 @@
+{
+  "name": "foldline",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && vite build --ssr src/entry-server.tsx --outDir dist-server && node scripts/prerender.mjs",
+    "preview": "vite preview",
+    "test:names": "node scripts/check-filenames.mjs"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@neslinesli93/qpdf-wasm": "^0.3.0",
+    "docx": "^9.8.1",
+    "docx-preview": "^0.4.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "jszip": "^3.10.2",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "~4.10.38",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.0",
+    "tesseract.js": "^6.0.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.0.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.3.0"
+  }
+}

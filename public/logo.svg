@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Foldline logo">
+  <rect width="1024" height="1024" rx="224" fill="#FFD43B"/>
+  <!-- the sheet with its top-right corner folded -->
+  <path d="M280 168H528L744 384V856H280Z" fill="#14171C"/>
+  <!-- the folded flap -->
+  <path d="M528 168L744 384H528Z" fill="#FFFFFF"/>
+  <!-- the fold line across the sheet -->
+  <path d="M280 640H744" stroke="#FFD43B" stroke-width="28" stroke-linecap="butt" stroke-dasharray="64 40"/>
+  <!-- a few text lines above the fold -->
+  <rect x="360" y="440" width="200" height="32" rx="16" fill="#FFD43B"/>
+  <rect x="360" y="520" width="304" height="32" rx="16" fill="#FFD43B" opacity=".5"/>
+</svg>

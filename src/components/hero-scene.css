@@ -1,0 +1,37 @@
+/* HeroScene: static by default; .hs-play (set while `play` > 0) runs each part's keyframes once. Transform/opacity only. */
+.hs { display: block; width: 100%; height: auto; overflow: hidden; }
+.hs * { transform-box: fill-box; transform-origin: center; }
+/* groups positioned with a static transform attribute must keep the SVG origin */
+.hs [transform] { transform-box: view-box; transform-origin: 0 0; }
+.hs .fo, .hs .scan, .hs .dimout { opacity: 0; }
+.hs .bar { transform: scaleX(.3); transform-origin: 0 50%; }
+.hs .open { transform: translate(0, -5px) rotate(50deg); transform-origin: 100% 100%; }
+.hs .fi { transform: none; }
+.hs-play .a { animation: 2.6s cubic-bezier(.45, 0, .25, 1) 1 backwards; animation-delay: var(--d, 0s); }
+.hs-play .in { animation-name: hs-in; } .hs-play .sel { animation-name: hs-sel; } .hs-play .hop { animation-name: hs-hop; }
+.hs-play .fade { animation-name: hs-fade; } .hs-play .pop { animation-name: hs-pop; } .hs-play .bar { animation-name: hs-bar; }
+.hs-play .scan { animation-name: hs-scan; } .hs-play .open { animation-name: hs-open; } .hs-play .dimout { animation-name: hs-dimout; }
+.hs-play .fo { animation-name: hs-fo; } .hs-play .fi { animation-name: hs-fi; }
+.hs-play .r1 { animation-name: hs-r1; } .hs-play .r2 { animation-name: hs-r2; } .hs-play .r3 { animation-name: hs-r3; }
+.hs-play .r4 { animation-name: hs-r4; } .hs-play .r5 { animation-name: hs-r5; } .hs-play .r6 { animation-name: hs-r6; }
+.hs .r1, .hs .r2, .hs .r3, .hs .r4, .hs .r5, .hs .r6 { transform-origin: 0 50%; }
+@keyframes hs-in { 0%, 8% { transform: translate(var(--x, 0px), var(--y, 0px)) rotate(var(--r, 0deg)) scale(var(--s, 1)); opacity: var(--o, 1); } 60%, 100% { transform: none; opacity: 1; } }
+@keyframes hs-sel { 0%, 8% { transform: translate(-176px, 0); opacity: 0; } 20% { opacity: 1; } 42% { transform: translate(-70px, 0); } 68% { transform: translate(8px, -10px) scale(1.06); } 100% { transform: none; } }
+@keyframes hs-hop { 0%, 6% { transform: translate(var(--x), 0); } 22% { transform: translate(var(--x), -22px); } 58% { transform: translate(0, -22px); } 76%, 100% { transform: none; } }
+@keyframes hs-fade { 0%, 45% { opacity: 0; } 80%, 100% { opacity: 1; } }
+@keyframes hs-pop { 0%, 60% { opacity: 0; transform: scale(.3); } 78% { opacity: 1; transform: scale(1.2); } 92%, 100% { opacity: 1; transform: scale(1); } }
+@keyframes hs-bar { 0%, 8% { transform: scaleX(1); } 62%, 100% { transform: scaleX(.3); } }
+@keyframes hs-scan { 0% { opacity: 1; transform: translateY(0); } 72% { opacity: 1; transform: translateY(var(--h)); } 84%, 100% { opacity: 0; transform: translateY(var(--h)); } }
+@keyframes hs-open { 0%, 28% { transform: none; } 66%, 100% { transform: translate(0, -5px) rotate(50deg); } }
+@keyframes hs-dimout { 0%, 25% { opacity: .5; } 62%, 100% { opacity: 0; } }
+@keyframes hs-fo { 0%, 6% { transform: translate(-188px, 0) scaleX(1); opacity: 0; } 14% { opacity: 1; } 40% { transform: translate(0, 0) scaleX(1); opacity: 1; } 54%, 100% { transform: translate(0, 0) scaleX(0); opacity: 1; } }
+@keyframes hs-fi { 0%, 52% { transform: scaleX(0); } 72%, 100% { transform: scaleX(1); } }
+@keyframes hs-r1 { 0%, 8% { transform: scaleX(0); } 17%, 100% { transform: scaleX(1); } }
+@keyframes hs-r2 { 0%, 17% { transform: scaleX(0); } 26%, 100% { transform: scaleX(1); } }
+@keyframes hs-r3 { 0%, 27% { transform: scaleX(0); } 36%, 100% { transform: scaleX(1); } }
+@keyframes hs-r4 { 0%, 36% { transform: scaleX(0); } 45%, 100% { transform: scaleX(1); } }
+@keyframes hs-r5 { 0%, 46% { transform: scaleX(0); } 55%, 100% { transform: scaleX(1); } }
+@keyframes hs-r6 { 0%, 56% { transform: scaleX(0); } 65%, 100% { transform: scaleX(1); } }
+/* armed but not started: sit on the first keyframe (backwards fill) until play begins */
+.hs-wait .a { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .hs .a { animation: none !important; } }

@@ -1,0 +1,214 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --desk: #E7E9EE; --panel: #F4F5F8; --card: #fff; --ink: #14171C; --mute: #4A515E; --line: #D3D8E0;
+  --hl: #FFD43B; --hl-ink: #14171C; --danger: #B42318;
+  --sheet-shadow: 0 1px 2px rgba(20,23,28,.08), 0 10px 24px -10px rgba(20,23,28,.28);
+  /* one color per loaded file, so page numbers from different PDFs stay distinct */
+  --f0: #2F6BFF; --f1: #C2410C; --f2: #0F766E; --f3: #9333EA; --f4: #BE185D; --f5: #4D7C0F;
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+}
+/* Dark applies when the system is dark and the user hasn't forced light, or when they forced dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --desk: #0E1014; --panel: #14171C; --card: #1C2027; --ink: #F1F3F6; --mute: #98A0AE; --line: #2A2F38; --danger: #FF8A7A;
+    --sheet-shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 24px -10px rgba(0,0,0,.7);
+  --f0: #7AA2FF; --f1: #FB923C; --f2: #2DD4BF; --f3: #C084FC; --f4: #F472B6; --f5: #A3E635;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --desk: #0E1014; --panel: #14171C; --card: #1C2027; --ink: #F1F3F6; --mute: #98A0AE; --line: #2A2F38; --danger: #FF8A7A;
+  --sheet-shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 24px -10px rgba(0,0,0,.7);
+  --f0: #7AA2FF; --f1: #FB923C; --f2: #2DD4BF; --f3: #C084FC; --f4: #F472B6; --f5: #A3E635;
+}
+
+@theme inline {
+  --color-desk: var(--desk);
+  --color-panel: var(--panel);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-mute: var(--mute);
+  --color-line: var(--line);
+  --color-hl: var(--hl);
+  --color-hl-ink: var(--hl-ink);
+  --color-danger: var(--danger);
+  --shadow-sheet: var(--sheet-shadow);
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body { @apply bg-desk font-sans text-ink antialiased; }
+button:focus-visible, a:focus-visible, label:has(:focus-visible) { outline: 3px solid #2F6BFF; outline-offset: 2px; }
+/* Keep a focused field (and a scrolled-to one) clear of the fixed bottom dock. */
+input, select, textarea, button { scroll-margin-bottom: calc(var(--dock-h, 0px) + 1.25rem); }
+button { cursor: pointer; }
+
+@layer components {
+  .btn { @apply inline-flex min-h-11 max-w-full text-center cursor-pointer items-center justify-center gap-2 rounded-[14px] border border-line bg-card px-4 py-2 text-[15px] font-medium hover:border-ink disabled:cursor-default disabled:opacity-45; }
+  .btn-hl { @apply border-transparent bg-hl font-semibold text-hl-ink hover:border-transparent hover:brightness-95; }
+  .btn-lg { @apply min-h-14 rounded-2xl px-6 py-3 text-base; }
+  .fld { @apply min-w-0 min-h-11 rounded-[14px] border border-line bg-desk px-3.5 py-2 text-base text-ink placeholder:text-mute; }
+  .ib { @apply grid size-11 place-items-center rounded-xl text-mute hover:bg-line hover:text-ink; }
+}
+button:active:not(:disabled), .btn:active { transform: scale(.97); transition: transform 90ms; }
+
+/* ---------- type scale: display font for headings and numbers ---------- */
+.h-display { font-family: var(--font-display); font-weight: 700; letter-spacing: -.02em; line-height: 1.05; }
+
+/* ---------- page grid ---------- */
+.page-in { animation: page-in .22s ease-out backwards; animation-delay: calc(min(var(--i, 0), 10) * 28ms); }
+@keyframes page-in { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+.page-leave { opacity: 0; transform: translateY(10px) scale(.92); transition: opacity .2s ease, transform .2s ease; pointer-events: none; }
+/* folded corner on selected pages: the fold line the product is named after */
+.fold-corner { position: absolute; right: 0; top: 0; width: 32px; height: 32px; background: linear-gradient(225deg, var(--desk) 50%, var(--ink) 50%); border-bottom-left-radius: 8px; animation: fold-in .18s var(--ease-spring); transform-origin: top right; }
+.fold-corner svg { position: absolute; left: 4px; bottom: 4px; width: 12px; height: 12px; color: var(--desk); stroke-width: 3.5; }
+@keyframes fold-in { from { transform: scale(.4); opacity: 0; } }
+.insert-bar { position: absolute; top: -2px; bottom: 30px; width: 4px; border-radius: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--desk); z-index: 5; }
+.handle { touch-action: none; cursor: grab; }
+.handle:active { cursor: grabbing; }
+
+/* ---------- bottom dock (selection actions + primary action) ---------- */
+.dock { position: fixed; inset: auto 0 0 0; z-index: 30; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--desk) 70%, transparent); pointer-events: none; }
+.dock > * { pointer-events: auto; }
+@media (min-width: 768px) { .dock { left: 240px; } }
+.dock-bar { animation: dock-up .2s ease-out; }
+@keyframes dock-up { from { opacity: 0; transform: translateY(12px); } }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin .9s linear infinite; }
+
+/* ---------- toasts and success card ---------- */
+.toast-in { animation: toast-in .2s ease-out; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
+.toast-timer { transform-origin: left; animation: toast-timer 5s linear forwards; }
+@keyframes toast-timer { to { transform: scaleX(0); } }
+.pop-in { animation: pop-in .24s var(--ease-spring); }
+@keyframes pop-in { from { opacity: 0; transform: scale(.9); } }
+
+/* ---------- empty state: a fan of sheets that breathes and opens up when a file is dragged over ---------- */
+.fan { position: relative; height: 290px; }
+.fan i { position: absolute; left: 50%; top: 50%; width: 190px; height: 248px; margin: -124px 0 0 -95px; background: #fff; border-radius: 6px; box-shadow: var(--sheet-shadow); transition: transform .22s var(--ease-spring); animation: fan-float 5s ease-in-out infinite; }
+.fan i::before { content: ""; position: absolute; inset: 26px 20px; background: repeating-linear-gradient(#fff 0 14px, #E4E7EC 14px 16px); }
+.fan i:nth-child(1) { transform: translateX(-60px) rotate(-10deg); animation-delay: -1.6s; }
+.fan i:nth-child(2) { transform: translateX(60px) rotate(10deg); animation-delay: -3.2s; }
+.fan i:nth-child(3) { transform: rotate(-1deg); }
+.fan i:nth-child(3)::after { content: ""; position: absolute; left: 20px; top: 56px; width: 100px; height: 13px; background: var(--hl); mix-blend-mode: multiply; border-radius: 2px; }
+.is-dragging .fan i:nth-child(1) { transform: translateX(-96px) rotate(-16deg); }
+.is-dragging .fan i:nth-child(2) { transform: translateX(96px) rotate(16deg); }
+.is-dragging .fan i:nth-child(3) { transform: translateY(-10px) rotate(0deg) scale(1.04); }
+@keyframes fan-float { 50% { translate: 0 -6px; } }
+@media (max-width: 767px) { .fan { height: 210px; } .fan i { scale: .75; } }
+
+/* Reduced motion: no entrance, no float, no spring; state changes are instant. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  .fan i { animation: none; }
+  .tool-art .ta, .ts .a { animation: none !important; }
+}
+
+/* long-form text (tool pages, policies) */
+.prose-fl { line-height: 1.7; }
+.prose-fl h1 { font-family: var(--font-display); font-size: 2rem; font-weight: 700; line-height: 1.15; letter-spacing: -.01em; }
+.prose-fl h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; line-height: 1.2; margin: 2.25rem 0 .6rem; }
+.prose-fl h3 { font-size: 1.05rem; font-weight: 600; margin: 1.4rem 0 .3rem; }
+.prose-fl p, .prose-fl li { color: var(--mute); }
+.prose-fl h1 + p, .prose-fl h2 + p { margin-top: 0; }
+.prose-fl p { margin: .75rem 0; max-width: 68ch; }
+.prose-fl ul, .prose-fl ol { margin: .75rem 0; padding-left: 1.4rem; max-width: 68ch; }
+.prose-fl ul { list-style: disc; } .prose-fl ol { list-style: decimal; }
+.prose-fl li { margin: .35rem 0; }
+.prose-fl a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* policy tables, inline code and strong text */
+.prose-fl strong { color: var(--ink); font-weight: 600; }
+.prose-fl code { font-size: .875em; background: var(--line); border-radius: 6px; padding: .1em .35em; color: var(--ink); }
+.prose-fl table { width: 100%; min-width: 34rem; border-collapse: collapse; margin: .75rem 0; font-size: .95rem; }
+.prose-fl th, .prose-fl td { text-align: left; vertical-align: top; padding: .55rem .75rem; border-bottom: 1px solid var(--line); color: var(--mute); }
+.prose-fl th { color: var(--ink); font-weight: 600; }
+.prose-fl button.underline { color: var(--ink); text-underline-offset: 3px; cursor: pointer; }
+
+/* ---------- operation animations (OpAnimation) ---------- */
+.op-anim { display: block; width: 100%; max-width: 280px; height: auto; }
+.op-anim * { transform-box: fill-box; }
+.op-flow { stroke-dasharray: 4 7; animation: op-flow .9s linear infinite; }
+.op-grow { transform-origin: left center; animation: op-grow 3.2s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.op-scan { mix-blend-mode: multiply; opacity: .8; animation: op-scan 2.4s ease-in-out infinite; }
+.op-fly { animation: op-fly 3.2s ease-in infinite; animation-delay: var(--d, 0s); }
+.op-caret { animation: op-caret 1s steps(1) infinite; }
+.op-stamp { transform-origin: center; animation: op-stamp 3.2s ease-out infinite; }
+.op-idle .op-flow, .op-idle .op-grow, .op-idle .op-scan, .op-idle .op-fly, .op-idle .op-caret, .op-idle .op-stamp { animation: none; }
+.op-idle .op-scan { opacity: 0; }
+@keyframes op-flow { to { stroke-dashoffset: -11; } }
+@keyframes op-grow { 0%, 8% { transform: scaleX(0); } 30%, 88% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+@keyframes op-scan { 0% { transform: translateY(0); } 70%, 100% { transform: translateY(54px); } }
+@keyframes op-fly { 0%, 10% { transform: translateX(0); opacity: 1; } 45% { transform: translateX(18px); opacity: 0; } 55%, 100% { transform: translateX(0); opacity: 0; } 92% { opacity: 1; } }
+@keyframes op-caret { 50% { opacity: 0; } }
+@keyframes op-stamp { 0%, 62% { transform: scale(0); opacity: 0; } 76% { transform: scale(1.25); opacity: 1; } 84%, 90% { transform: scale(1); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
+
+/* ---------- home tool-card illustrations (ToolArt) ---------- */
+.tool-art { overflow: visible; }
+.tool-art * { transform-box: fill-box; transform-origin: center; }
+.tool-art .ta { animation-duration: 3.6s; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+.ta-in { animation-name: ta-in; } .ta-out { animation-name: ta-out; } .ta-sq { animation-name: ta-sq; }
+.ta-swing { animation-name: ta-swing; } .ta-pull { animation-name: ta-pull; } .ta-squash { animation-name: ta-squash; }
+.ta-r1 { animation-name: ta-r1; } .ta-r2 { animation-name: ta-r2; } .ta-r3 { animation-name: ta-r3; }
+.tool-art .ta-ln { transform-origin: left center; }
+.tool-art .ta-swing { transform-origin: 100% 100%; } .ta-scan { animation-name: ta-scan; } .ta-arrow { animation-name: ta-arrow; } .ta-fade { animation-name: ta-fade; }
+@keyframes ta-in { 0%, 100% { transform: translate(var(--x, 0), var(--y, 0)); } 40%, 70% { transform: none; } }
+@keyframes ta-out { 0%, 100% { transform: none; } 40%, 70% { transform: translate(var(--x, 0), var(--y, 0)); } }
+@keyframes ta-sq { 0%, 100% { transform: none; } 40%, 70% { transform: scale(var(--s, .8)); } }
+@keyframes ta-swing { 0%, 100% { transform: none; } 40%, 70% { transform: translate(-1px, -2px) rotate(-70deg); } }
+@keyframes ta-pull { 0%, 100% { transform: none; } 40%, 70% { transform: translate(2px, -7px) rotate(5deg); } }
+@keyframes ta-squash { 0%, 100% { transform: none; } 40%, 70% { transform: scale(.82, .5); } }
+@keyframes ta-r1 { 0%, 12% { transform: scaleX(0); } 22%, 92% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+@keyframes ta-r2 { 0%, 26% { transform: scaleX(0); } 36%, 92% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+@keyframes ta-r3 { 0%, 42% { transform: scaleX(0); } 52%, 92% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+@keyframes ta-scan { 0% { transform: translateY(0); opacity: 1; } 55% { transform: translateY(11px); opacity: 1; } 65%, 99% { transform: translateY(11px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+@keyframes ta-arrow { 0%, 100% { transform: translateX(-1px); opacity: .45; } 50% { transform: translateX(1px); opacity: 1; } }
+@keyframes ta-fade { 0%, 25% { opacity: 0; } 55%, 85% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---------- per-tool scenes (ToolScene): static by default, play class ts-play set by caller ---------- */
+.ts { display: block; width: 100%; height: auto; overflow: visible; }
+.ts * { transform-box: fill-box; transform-origin: center; }
+.ts .scan { opacity: 0; }
+.ts .badge, .ts .tintout, .ts .gone { opacity: 0; }
+.ts .tint { opacity: .4; }
+.ts .wm { opacity: .35; transform: rotate(-35deg); }
+.ts .open { transform: translate(0, -2px) rotate(55deg); transform-origin: 100% 100%; }
+.ts .bar, .ts .r1, .ts .r2, .ts .r3, .ts .r4, .ts .r1 { transform-origin: left center; }
+.ts .tok { opacity: 0; }
+.ts-play .a { animation: 2.4s cubic-bezier(.45, 0, .25, 1) 1 backwards; animation-delay: var(--d, 0s); }
+.ts-play .in { animation-name: ts-in; } .ts-play .out { animation-name: ts-out; } .ts-play .pull { animation-name: ts-pull; }
+.ts-play .hop { animation-name: ts-hop; } .ts-play .sq { animation-name: ts-sq; } .ts-play .bar { animation-name: ts-bar; }
+.ts-play .scan { animation-name: ts-scan; } .ts-play .badge { animation-name: ts-badge; } .ts-play .tint { animation-name: ts-tint; }
+.ts-play .tintout { animation-name: ts-tintout; } .ts-play .open { animation-name: ts-open; } .ts-play .rot { animation-name: ts-rot; }
+.ts-play .draw { animation-name: ts-draw; } .ts-play .wm { animation-name: ts-wm; } .ts-play .tok { animation-name: ts-tok; }
+.ts-play .pop { animation-name: ts-pop; } .ts-play .gone { animation-name: ts-gone; }
+.ts-play .r1 { animation-name: ts-r1; } .ts-play .r2 { animation-name: ts-r2; } .ts-play .r3 { animation-name: ts-r3; } .ts-play .r4 { animation-name: ts-r4; }
+.ts-play .drop1 { animation-name: ts-drop; --d: .9s; } .ts-play .drop2 { animation-name: ts-drop; --d: 1.15s; } .ts-play .drop3 { animation-name: ts-drop; --d: 1.4s; }
+.ts .draw { stroke-dasharray: 1; }
+@keyframes ts-in { 0%, 8% { transform: translate(var(--x, 0px), var(--y, 0px)) rotate(var(--r, 0deg)) scale(var(--s, 1)); opacity: var(--o, 1); } 60%, 100% { transform: none; opacity: 1; } }
+@keyframes ts-out { 0%, 100% { transform: none; } 28%, 68% { transform: translate(var(--x, 0px), var(--y, 0px)); } }
+@keyframes ts-pull { 0%, 6% { transform: none; } 24%, 30% { transform: translate(4px, -3px); } 55%, 72% { transform: translate(var(--x), var(--y)); } 100% { transform: none; } }
+@keyframes ts-hop { 0%, 6% { transform: translate(var(--x), 0); } 20% { transform: translate(var(--x), -9px); } 55% { transform: translate(0, -9px); } 72%, 100% { transform: none; } }
+@keyframes ts-sq { 0%, 100% { transform: none; } 35%, 68% { transform: scale(var(--sx), var(--sy)); } }
+@keyframes ts-bar { 0%, 100% { transform: none; } 35%, 68% { transform: scaleX(.35); } }
+@keyframes ts-scan { 0% { opacity: 1; transform: translateY(0); } 70% { opacity: 1; transform: translateY(var(--h)); } 82%, 100% { opacity: 0; transform: translateY(var(--h)); } }
+@keyframes ts-badge { 0%, 45% { opacity: 0; transform: scale(0); } 58%, 72% { opacity: 1; transform: scale(1); } 90%, 100% { opacity: 0; transform: scale(.6); } }
+@keyframes ts-tint { 0%, 55% { opacity: 0; } 90%, 100% { opacity: .4; } }
+@keyframes ts-tintout { 0%, 25% { opacity: .4; } 60%, 100% { opacity: 0; } }
+@keyframes ts-open { 0%, 25% { transform: none; } 62%, 100% { transform: translate(0, -2px) rotate(55deg); } }
+@keyframes ts-rot { 0%, 6% { transform: rotate(-90deg); } 62%, 100% { transform: none; } }
+@keyframes ts-draw { 0%, 12% { stroke-dashoffset: 1; } 72%, 100% { stroke-dashoffset: 0; } }
+@keyframes ts-wm { 0%, 10% { opacity: 0; transform: rotate(-35deg) scale(1.7); } 55%, 100% { opacity: .35; transform: rotate(-35deg) scale(1); } }
+@keyframes ts-tok { 0% { opacity: 0; transform: translateX(0); } 15% { opacity: 1; } 55% { opacity: 1; transform: translateX(14px); } 70%, 100% { opacity: 0; transform: translateX(18px); } }
+@keyframes ts-pop { 0%, 62% { opacity: 0; transform: scale(0); } 78% { opacity: 1; transform: scale(1.25); } 90%, 100% { opacity: 1; transform: scale(1); } }
+@keyframes ts-r1 { 0%, 14% { transform: scaleX(0); } 24%, 100% { transform: scaleX(1); } }
+@keyframes ts-r2 { 0%, 32% { transform: scaleX(0); } 42%, 100% { transform: scaleX(1); } }
+@keyframes ts-r3 { 0%, 50% { transform: scaleX(0); } 60%, 100% { transform: scaleX(1); } }
+@keyframes ts-r4 { 0%, 66% { transform: scaleX(0); } 76%, 100% { transform: scaleX(1); } }
+@keyframes ts-gone { 0%, 8% { transform: none; opacity: 1; } 45%, 60% { transform: translate(var(--x), var(--y)); opacity: 1; } 85%, 100% { transform: translate(var(--x), var(--y)) scale(.8); opacity: 0; } }
+@keyframes ts-drop { 0%, 15% { opacity: 0; transform: translateY(-4px); } 45%, 100% { opacity: 1; transform: none; } }

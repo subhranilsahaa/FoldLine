@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Foldline: PDF tools that stay on your device</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--desk:#E7E9EE;--panel:#F4F5F8;--card:#fff;--ink:#14171C;--mute:#5E6573;--line:#D3D8E0;--hl:#FFD43B;--hli:#14171C;
+--shadow:0 1px 2px rgba(20,23,28,.08),0 10px 24px -10px rgba(20,23,28,.28);
+--display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;--body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--desk:#0E1014;--panel:#14171C;--card:#1C2027;--ink:#F1F3F6;--mute:#98A0AE;--line:#2A2F38;--shadow:0 1px 2px rgba(0,0,0,.4),0 10px 24px -10px rgba(0,0,0,.7)}}
+:root[data-theme="dark"]{--desk:#0E1014;--panel:#14171C;--card:#1C2027;--ink:#F1F3F6;--mute:#98A0AE;--line:#2A2F38;--shadow:0 1px 2px rgba(0,0,0,.4),0 10px 24px -10px rgba(0,0,0,.7)}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--desk);color:var(--ink);font:15px/1.5 var(--body)}
+[hidden]{display:none!important}
+svg{width:18px;height:18px;flex:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,.drop:focus-visible{outline:3px solid #2F6BFF;outline-offset:2px}
+
+.app{display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:auto 1fr;min-height:100dvh}
+.top{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:10px;font:700 21px var(--display);letter-spacing:-.02em}
+.logo b{width:26px;height:26px;border-radius:7px;background:var(--hl);display:grid;place-items:center;color:var(--hli)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mute);border:1px solid var(--line);border-radius:99px;padding:4px 11px 4px 9px}
+.chip svg{width:14px;height:14px}
+.sp{flex:1}
+.rail{background:var(--panel);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:4px}
+.rail button{display:flex;align-items:center;gap:12px;text-align:left;border:0;background:none;padding:10px 12px;border-radius:11px;font-weight:600;line-height:1.2}
+.rail button:hover{background:var(--line)}
+.rail button[aria-current="true"]{background:var(--ink);color:var(--desk)}
+.rail small{display:block;font-weight:400;font-size:12px;opacity:.7;margin-top:2px}
+main{padding:26px clamp(16px,3vw,44px) 90px;min-width:0}
+
+.b{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-weight:500;font-size:14px}
+.b:hover{border-color:var(--ink)}
+.b:disabled{opacity:.45;cursor:default}
+.b.hl{background:var(--hl);color:var(--hli);border-color:transparent;font-weight:600}
+.b.hl:hover{filter:brightness(.95)}
+.b.lg{min-height:48px;padding:10px 20px;font-size:16px;border-radius:12px}
+
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center;max-width:1020px;margin:5vh auto 0}
+.big{font:700 clamp(36px,5.4vw,60px)/1 var(--display);letter-spacing:-.035em;margin:0 0 16px}
+.hero p{margin:0 0 26px;color:var(--mute);max-width:44ch;font-size:17px}
+.hero .note{font-size:13px;margin:14px 0 0}
+.fan{position:relative;height:310px;transition:transform .2s}
+.over .fan{transform:scale(1.05)}
+.fan i{position:absolute;left:50%;top:50%;width:196px;height:256px;margin:-128px 0 0 -98px;background:#fff;border-radius:4px;box-shadow:var(--shadow)}
+.fan i::before{content:"";position:absolute;inset:26px 20px;background:repeating-linear-gradient(#fff 0 14px,#E4E7EC 14px 16px)}
+.fan i:nth-child(1){transform:translateX(-62px) rotate(-10deg)}
+.fan i:nth-child(2){transform:translateX(62px) rotate(10deg)}
+.fan i:nth-child(3){transform:rotate(-1deg)}
+.fan i:nth-child(3)::after{content:"";position:absolute;left:20px;top:56px;width:104px;height:13px;background:var(--hl);mix-blend-mode:multiply;border-radius:2px}
+
+.head h1{font:700 30px/1.1 var(--display);letter-spacing:-.025em;margin:0}
+.head p{margin:6px 0 0;color:var(--mute)}
+.files{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 4px}
+.file{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:99px;padding:3px 4px 3px 12px;font-size:13px;max-width:100%}
+.file b{font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file span{color:var(--mute)}
+.file button,.ib{border:0;background:none;border-radius:8px;display:grid;place-items:center;color:var(--mute)}
+.file button{width:26px;height:26px;border-radius:50%}
+.file button:hover,.ib:hover{background:var(--line);color:var(--ink)}
+.file svg{width:14px;height:14px}
+.bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 0;background:linear-gradient(var(--desk) 82%,transparent)}
+.stat{color:var(--mute);font-size:13px;padding:0 6px}
+
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:22px 18px;margin-top:6px}
+.pg{position:relative}
+.sheet{position:relative;background:#fff;border-radius:3px;box-shadow:var(--shadow);overflow:hidden;cursor:grab;min-height:120px}
+.sheet canvas{display:block;width:100%;height:auto;pointer-events:none}
+.pg.sel .sheet{box-shadow:0 0 0 3px var(--ink),var(--shadow)}
+.pg.drop .sheet{box-shadow:0 0 0 3px var(--hl)}
+.badge{position:absolute;top:8px;left:8px;width:26px;height:26px;border-radius:50%;background:var(--hl);color:#14171C;display:none;place-items:center}
+.badge svg{width:15px;height:15px;stroke-width:3}
+.pg.sel .badge{display:grid}
+.cap{display:flex;align-items:center;margin-top:7px;font-size:13px}
+.num{flex:1;font-weight:600}
+.tag{font-size:11px;font-weight:600;background:var(--hl);color:#14171C;border-radius:5px;padding:1px 6px;margin-right:4px}
+.ib{width:30px;height:30px}
+.ib svg{width:16px;height:16px}
+
+#stagewrap{margin-top:8px}
+#stage{position:relative;width:100%;max-width:660px;touch-action:none;user-select:none;cursor:crosshair;box-shadow:var(--shadow);background:#fff}
+#stage canvas{display:block;width:100%;height:auto;pointer-events:none}
+#clip{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+#dim{position:absolute;box-shadow:0 0 0 9999px rgba(10,14,20,.6)}
+#box{position:absolute;border:2px solid var(--hl);pointer-events:none}
+.h{position:absolute;width:16px;height:16px;margin:-8px;border-radius:50%;background:var(--hl);border:2px solid #14171C;pointer-events:auto;touch-action:none}
+.h[data-h="nw"]{left:0;top:0;cursor:nwse-resize}.h[data-h="n"]{left:50%;top:0;cursor:ns-resize}.h[data-h="ne"]{left:100%;top:0;cursor:nesw-resize}
+.h[data-h="e"]{left:100%;top:50%;cursor:ew-resize}.h[data-h="se"]{left:100%;top:100%;cursor:nwse-resize}.h[data-h="s"]{left:50%;top:100%;cursor:ns-resize}
+.h[data-h="sw"]{left:0;top:100%;cursor:nesw-resize}.h[data-h="w"]{left:0;top:50%;cursor:ew-resize}
+.hint{color:var(--mute);font-size:13px;margin:14px 0 0;max-width:62ch}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--desk);padding:10px 16px;border-radius:10px;max-width:90vw;z-index:9;font-size:14px;box-shadow:var(--shadow)}
+
+@media (max-width:760px){
+.app{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}
+.rail{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px 12px}
+.rail button{flex:none;padding:8px 12px}.rail small{display:none}
+.hero{grid-template-columns:1fr;margin-top:2vh}.fan{height:230px;order:-1}.fan i{transform-origin:center;scale:.78}
+.chip span{display:none}
+}
+@media (prefers-reduced-motion:reduce){.fan{transition:none}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="logo"><b id="mark"></b>Foldline</div>
+    <span class="chip" id="priv"><span>Runs on your device</span></span>
+    <span class="sp"></span>
+    <button class="b" id="reset" hidden>Start over</button>
+  </header>
+  <nav class="rail" id="rail" aria-label="Tools"></nav>
+  <main>
+    <section id="empty" class="hero">
+      <div>
+        <h1 class="big" id="hTitle"></h1>
+        <p id="hText"></p>
+        <label class="b hl lg" id="pick0">Choose PDFs<input id="f0" type="file" accept="application/pdf" multiple hidden></label>
+        <p class="note">or drop files anywhere on this page</p>
+      </div>
+      <div class="fan" aria-hidden="true"><i></i><i></i><i></i></div>
+    </section>
+
+    <section id="work" hidden>
+      <div class="head"><h1 id="title"></h1><p id="desc"></p></div>
+      <div class="files" id="files"></div>
+
+      <div id="org">
+        <div class="bar">
+          <button class="b" id="all">Select all</button>
+          <button class="b" id="none">Clear</button>
+          <button class="b" id="rotSel"></button>
+          <button class="b" id="delSel"></button>
+          <span class="stat" id="stat"></span>
+          <span class="sp"></span>
+          <button class="b hl" id="exAll"><span></span></button>
+        </div>
+        <div id="grid"></div>
+        <p class="hint" id="orgHint">Tap a page to select it. Drag pages to reorder, or use the arrows on touch screens.</p>
+      </div>
+
+      <div id="crp" hidden>
+        <div class="bar">
+          <button class="b" id="cPrev"></button>
+          <span class="stat" id="cNum"></span>
+          <button class="b" id="cNext"></button>
+          <button class="b" id="cRot"></button>
+          <span class="sp"></span>
+          <button class="b" id="cClear">Clear crop</button>
+          <button class="b" id="cAll">Apply to all pages</button>
+          <button class="b hl" id="cExp">Download PDF</button>
+        </div>
+        <div id="stagewrap">
+          <div id="stage"><div id="clip"><div id="dim" hidden></div></div><div id="box" hidden></div></div>
+        </div>
+        <p class="hint">Drag on the page to draw the area to keep. Drag the box to move it and the dots to resize. The original content stays in the file; only the visible area changes.</p>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" hidden></div>
+
+<script>
+const {PDFDocument, degrees} = PDFLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const $ = s => document.querySelector(s);
+const el = (t, c) => { const e = document.createElement(t); if(c) e.className = c; return e; };
+const P = {
+  rot: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  del: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  l: '<path d="m15 18-6-6 6-6"/>', r: '<path d="m9 18 6-6-6-6"/>', x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>', check: '<path d="M20 6 9 17l-5-5"/>',
+  crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
+  merge: '<path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>',
+  grid: '<path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M14 14h7v7h-7z"/><path d="M3 14h7v7H3z"/>',
+  cut: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/>',
+  lock: '<path d="M5 11h14v10H5z"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  fold: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>'
+};
+const ic = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const T = {
+  merge:    {t: 'Merge PDFs', r: 'Combine files', d: 'Add files, drag pages into order, then download one PDF.', i: 'merge', dt: 'Drop the PDFs you want to merge', dh: 'Pick two or more files. You can add more later.', a: 'Merge & download', s: '-merged'},
+  organize: {t: 'Organize pages', r: 'Reorder, rotate, delete', d: 'Rearrange pages, turn them, or drop the ones you don’t need.', i: 'grid', dt: 'Drop the PDF you want to reorganize', dh: 'Pages appear as thumbnails you can drag around.', a: 'Download PDF', s: '-organized'},
+  extract:  {t: 'Split & extract', r: 'Pick pages out', d: 'Select the pages you want and save them as a new PDF.', i: 'cut', dt: 'Drop the PDF to pull pages from', dh: 'Tap the pages to keep, then extract them.', a: 'Extract pages', s: '-extract'},
+  crop:     {t: 'Crop pages', r: 'Trim the margins', d: 'Draw the area to keep on each page, or apply one crop to all.', i: 'crop', dt: 'Drop the PDF you want to crop', dh: 'You’ll draw the crop box right on the page.', a: '', s: '-cropped'}
+};
+const S = {docs: [], pages: [], tab: 'merge', cur: 0, tok: 0, drag: null};
+let Q = Promise.resolve(), busy = false, tt;
+const tot = p => (p.base + p.rot) % 360;
+const clamp = v => Math.max(0, Math.min(1, v));
+const sel = () => S.pages.filter(p => p.sel);
+const cur = () => S.pages[S.cur];
+
+function toast(m){ const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 3500); }
+
+async function addFiles(files){
+  const list = [...files].filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  if(!list.length) return toast('Choose PDF files.');
+  toast('Opening ' + (list.length > 1 ? list.length + ' files' : list[0].name) + '…');
+  for(const f of list){
+    try{
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      const pj = await pdfjsLib.getDocument({data: bytes.slice()}).promise;
+      const d = S.docs.push({name: f.name, bytes, pj}) - 1;
+      for(let i = 0; i < pj.numPages; i++){
+        const pg = await pj.getPage(i + 1);
+        S.pages.push({d, i, base: pg.rotate, rot: 0, sel: false, crop: null});
+      }
+    }catch(e){ toast(`Couldn't open ${f.name}. It may be password protected or damaged.`); }
+  }
+  $('#toast').hidden = true; render();
+}
+
+function thumb(p){
+  if(!p.th || p.th.rot !== tot(p)){
+    const th = p.th = {rot: tot(p), c: document.createElement('canvas')};
+    Q = Q.then(async () => {
+      const pg = await S.docs[p.d].pj.getPage(p.i + 1);
+      const v0 = pg.getViewport({scale: 1, rotation: th.rot});
+      const v = pg.getViewport({scale: 260 / v0.width, rotation: th.rot});
+      th.c.width = v.width; th.c.height = v.height;
+      await pg.render({canvasContext: th.c.getContext('2d'), viewport: v}).promise;
+    }).catch(() => {});
+  }
+  return p.th.c;
+}
+
+function iconBtn(name, label, fn){
+  const b = el('button', 'ib'); b.innerHTML = ic(name); b.setAttribute('aria-label', label);
+  b.onclick = e => { e.stopPropagation(); fn(); }; return b;
+}
+
+function grid(){
+  const g = $('#grid'); g.innerHTML = '';
+  S.pages.forEach((p, n) => {
+    const c = el('div', 'pg' + (p.sel ? ' sel' : '')); c.draggable = true;
+    const sh = el('div', 'sheet'); sh.append(thumb(p));
+    sh.insertAdjacentHTML('beforeend', `<span class="badge">${ic('check')}</span>`);
+    sh.onclick = () => { p.sel = !p.sel; c.classList.toggle('sel', p.sel); stat(); };
+    const cap = el('div', 'cap');
+    const num = el('span', 'num'); num.textContent = n + 1; cap.append(num);
+    if(p.crop){ const t = el('span', 'tag'); t.textContent = 'Cropped'; cap.append(t); }
+    cap.append(iconBtn('l', 'Move page ' + (n + 1) + ' earlier', () => mv(n, -1)), iconBtn('r', 'Move page ' + (n + 1) + ' later', () => mv(n, 1)),
+      iconBtn('rot', 'Rotate page ' + (n + 1), () => rot(p)), iconBtn('del', 'Delete page ' + (n + 1), () => del(n)));
+    c.ondragstart = e => { S.drag = n; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', n); };
+    c.ondragover = e => { if(S.drag != null){ e.preventDefault(); c.classList.add('drop'); } };
+    c.ondragleave = () => c.classList.remove('drop');
+    c.ondrop = e => { e.preventDefault(); if(S.drag == null) return; const [m] = S.pages.splice(S.drag, 1); S.pages.splice(n, 0, m); S.drag = null; render(); };
+    c.ondragend = () => { S.drag = null; };
+    c.append(sh, cap); g.append(c);
+  });
+}
+
+function files(){
+  const f = $('#files'); f.innerHTML = '';
+  S.docs.forEach((d, i) => {
+    const n = S.pages.filter(p => p.d === i).length; if(!n) return;
+    const c = el('span', 'file'), b = el('b'), s = el('span');
+    b.textContent = d.name; s.textContent = n + (n === 1 ? ' page' : ' pages');
+    const x = el('button'); x.innerHTML = ic('x'); x.setAttribute('aria-label', 'Remove ' + d.name);
+    x.onclick = () => { S.pages = S.pages.filter(p => p.d !== i); render(); };
+    c.append(b, s, x); f.append(c);
+  });
+  const add = el('label', 'b'); add.innerHTML = ic('plus') + 'Add PDFs<input type="file" accept="application/pdf" multiple hidden>';
+  add.querySelector('input').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+  f.append(add);
+}
+
+function mv(n, d){ const m = n + d; if(m < 0 || m >= S.pages.length) return; [S.pages[n], S.pages[m]] = [S.pages[m], S.pages[n]]; render(); }
+function rot(p){ p.rot = (p.rot + 90) % 360; p.crop = null; render(); }
+function del(n){ S.pages.splice(n, 1); render(); }
+
+/* ---------- crop ---------- */
+async function cropView(){
+  const p = cur(); if(!p) return;
+  const tok = ++S.tok, st = $('#stage');
+  $('#cNum').textContent = `Page ${S.cur + 1} of ${S.pages.length}`;
+  $('#cPrev').disabled = S.cur === 0; $('#cNext').disabled = S.cur >= S.pages.length - 1;
+  const pg = await S.docs[p.d].pj.getPage(p.i + 1);
+  const v0 = pg.getViewport({scale: 1, rotation: tot(p)});
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const v = pg.getViewport({scale: 660 * dpr / v0.width, rotation: tot(p)});
+  const c = document.createElement('canvas'); c.width = v.width; c.height = v.height;
+  await pg.render({canvasContext: c.getContext('2d'), viewport: v}).promise;
+  if(tok !== S.tok) return;
+  st.querySelector('canvas')?.remove(); st.prepend(c); box();
+}
+function box(){
+  const c = cur()?.crop;
+  ['#box', '#dim'].forEach(s => {
+    const e = $(s); e.hidden = !c; if(!c) return;
+    Object.assign(e.style, {left: c.x * 100 + '%', top: c.y * 100 + '%', width: c.w * 100 + '%', height: c.h * 100 + '%'});
+  });
+}
+const stg = $('#stage');
+['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].forEach(h => { const i = el('i', 'h'); i.dataset.h = h; $('#box').append(i); });
+const pos = e => { const r = stg.getBoundingClientRect(); return [clamp((e.clientX - r.left) / r.width), clamp((e.clientY - r.top) / r.height)]; };
+let drag = null;
+stg.onpointerdown = e => {
+  const p = pos(e), c = cur().crop, h = e.target.dataset && e.target.dataset.h;
+  if(c && h) drag = {m: 'r', h, c: {...c}};
+  else if(c && p[0] >= c.x && p[0] <= c.x + c.w && p[1] >= c.y && p[1] <= c.y + c.h) drag = {m: 'm', p0: p, c: {...c}};
+  else drag = {m: 'n', p0: p};
+  stg.setPointerCapture(e.pointerId);
+};
+stg.onpointermove = e => {
+  if(!drag) return; const p = pos(e), pg = cur(), c = drag.c;
+  if(drag.m === 'n') pg.crop = {x: Math.min(drag.p0[0], p[0]), y: Math.min(drag.p0[1], p[1]), w: Math.abs(p[0] - drag.p0[0]), h: Math.abs(p[1] - drag.p0[1])};
+  else if(drag.m === 'm') pg.crop = {...c, x: Math.max(0, Math.min(1 - c.w, c.x + p[0] - drag.p0[0])), y: Math.max(0, Math.min(1 - c.h, c.y + p[1] - drag.p0[1]))};
+  else {
+    let l = c.x, t = c.y, r = c.x + c.w, b = c.y + c.h;
+    if(drag.h.includes('w')) l = p[0]; if(drag.h.includes('e')) r = p[0];
+    if(drag.h.includes('n')) t = p[1]; if(drag.h.includes('s')) b = p[1];
+    pg.crop = {x: Math.min(l, r), y: Math.min(t, b), w: Math.abs(r - l), h: Math.abs(b - t)};
+  }
+  box();
+};
+stg.onpointerup = stg.onpointercancel = () => {
+  const c = cur().crop; if(drag && c && (c.w < .03 || c.h < .03)) cur().crop = null;
+  drag = null; box();
+};
+
+/* ---------- export ---------- */
+async function build(list){
+  const out = await PDFDocument.create(), cache = {};
+  for(const p of list){
+    const src = cache[p.d] || (cache[p.d] = await PDFDocument.load(S.docs[p.d].bytes, {ignoreEncryption: true}));
+    const [pg] = await out.copyPages(src, [p.i]);
+    pg.setRotation(degrees(tot(p)));
+    if(p.crop){
+      const mb = pg.getCropBox(), R = tot(p), c = p.crop;
+      const q = [[c.x, c.y], [c.x + c.w, c.y + c.h]].map(([u, v]) =>
+        R === 90 ? [v, 1 - u] : R === 180 ? [1 - u, 1 - v] : R === 270 ? [1 - v, u] : [u, v]);
+      const x0 = Math.min(q[0][0], q[1][0]), x1 = Math.max(q[0][0], q[1][0]);
+      const y0 = Math.min(q[0][1], q[1][1]), y1 = Math.max(q[0][1], q[1][1]);
+      pg.setCropBox(mb.x + x0 * mb.width, mb.y + (1 - y1) * mb.height, (x1 - x0) * mb.width, (y1 - y0) * mb.height);
+    }
+    out.addPage(pg);
+  }
+  return out.save();
+}
+async function exportPdf(list, suffix){
+  if(busy) return;
+  if(!list.length) return toast('Select at least one page first.');
+  busy = true; toast('Building PDF…');
+  try{
+    const bytes = await build(list);
+    const name = S.docs[list[0].d].name.replace(/\.pdf$/i, '') + suffix + '.pdf';
+    const blob = new Blob([bytes], {type: 'application/pdf'});
+    const dl = window.claude ? await window.claude.use('downloads') : null;
+    if(dl){ await dl.save({filename: name, data: blob}); }
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 10000); }
+    toast('Saved ' + name);
+  }catch(e){
+    if(e && e.code === 'declined') $('#toast').hidden = true; else toast('Export failed: ' + ((e && e.message) || 'unknown error'));
+  }
+  busy = false;
+}
+
+/* ---------- chrome ---------- */
+function stat(){
+  const n = sel().length, ex = S.tab === 'extract';
+  $('#stat').textContent = `${S.pages.length} pages`;
+  $('#all').hidden = n === S.pages.length; $('#none').hidden = !n; $('#none').textContent = `Clear (${n})`;
+  $('#rotSel').hidden = !n || ex; $('#delSel').hidden = !n;
+  $('#exAll span').textContent = ex ? (n ? `Extract ${n} page${n > 1 ? 's' : ''}` : 'Extract pages') : T[S.tab].a;
+  $('#exAll').disabled = ex && !n;
+  $('#orgHint').hidden = S.tab !== 'extract' && S.tab !== 'organize' && S.tab !== 'merge';
+}
+function render(){
+  const has = S.pages.length > 0;
+  $('#empty').hidden = has; $('#work').hidden = !has; $('#reset').hidden = !has;
+  document.querySelectorAll('#rail button').forEach(b => b.setAttribute('aria-current', b.dataset.t === S.tab));
+  if(!has){ $('#hTitle').textContent = T[S.tab].dt; $('#hText').textContent = T[S.tab].dh + ' Files stay in this tab and are never uploaded.'; return; }
+  S.cur = Math.max(0, Math.min(S.cur, S.pages.length - 1));
+  $('#title').textContent = T[S.tab].t; $('#desc').textContent = T[S.tab].d;
+  files();
+  $('#org').hidden = S.tab === 'crop'; $('#crp').hidden = S.tab !== 'crop';
+  S.tab === 'crop' ? cropView() : grid();
+  stat();
+}
+
+$('#mark').innerHTML = ic('fold');
+$('#priv').insertAdjacentHTML('afterbegin', ic('lock'));
+$('#all').prepend(); $('#rotSel').innerHTML = ic('rot') + 'Rotate'; $('#delSel').innerHTML = ic('del') + 'Delete';
+$('#cPrev').innerHTML = ic('l') + 'Prev'; $('#cNext').innerHTML = 'Next' + ic('r'); $('#cRot').innerHTML = ic('rot') + 'Rotate';
+Object.entries(T).forEach(([k, v]) => {
+  const b = el('button'); b.dataset.t = k;
+  b.innerHTML = `${ic(v.i)}<span>${v.t}<small>${v.r}</small></span>`;
+  b.onclick = () => { S.tab = k; render(); $('#rail').scrollIntoView?.({block: 'nearest'}); };
+  $('#rail').append(b);
+});
+$('#f0').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+$('#reset').onclick = () => { S.docs = []; S.pages = []; S.cur = 0; render(); };
+$('#all').onclick = () => { S.pages.forEach(p => p.sel = true); render(); };
+$('#none').onclick = () => { S.pages.forEach(p => p.sel = false); render(); };
+$('#rotSel').onclick = () => { const l = sel(); if(!l.length) return toast('Select pages to rotate.'); l.forEach(p => { p.rot = (p.rot + 90) % 360; p.crop = null; }); render(); };
+$('#delSel').onclick = () => { if(!sel().length) return toast('Select pages to delete.'); S.pages = S.pages.filter(p => !p.sel); render(); };
+$('#exAll').onclick = () => exportPdf(S.tab === 'extract' ? sel() : S.pages, T[S.tab].s);
+$('#cExp').onclick = () => exportPdf(S.pages, T.crop.s);
+$('#cPrev').onclick = () => { if(S.cur > 0){ S.cur--; cropView(); } };
+$('#cNext').onclick = () => { if(S.cur < S.pages.length - 1){ S.cur++; cropView(); } };
+$('#cRot').onclick = () => rot(cur());
+$('#cClear').onclick = () => { cur().crop = null; box(); };
+$('#cAll').onclick = () => { const c = cur().crop; if(!c) return toast('Draw a crop area first.'); S.pages.forEach(p => p.crop = {...c}); toast('Crop applied to all pages.'); };
+
+const isFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => { if(isFiles(e)){ e.preventDefault(); document.body.classList.add('over'); } }));
+['dragleave', 'drop'].forEach(t => document.addEventListener(t, () => document.body.classList.remove('over')));
+document.addEventListener('drop', e => { if(isFiles(e)){ e.preventDefault(); addFiles(e.dataTransfer.files); } });
+render();
+</script>
+</body>
+</html>

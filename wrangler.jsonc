@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "foldline",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Serve 404.html (the prerendered "Page not found" page) for unknown URLs.
+    // Don't use "single-page-application" here: it would answer every unknown URL with index.html.
+    "not_found_handling": "404-page"
+  }
+}
